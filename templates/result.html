@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Plant Disease Detection</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* 🌈 Background and global styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* ✅ Black and Grey gradient */
+            background: linear-gradient(135deg, #000000 0%, #808080 100%);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 20px auto;
+            padding: 0 15px 40px;
+        }
+
+        header h1 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #f5f5f5;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        /* 🎥 Video feed container */
+        .video-feed-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+
+        .video-feed {
+            width: 100%;
+            border-bottom: 1px solid #333;
+            overflow: hidden;
+        }
+        .video-feed img {
+            width: 100%;
+            display: block;
+            border-radius: 10px 10px 0 0;
+            background: #000;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+            padding: 20px;
+        }
+        .video-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .camera-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #2e2e2e;
+            border-radius: 0 0 10px 10px;
+            box-shadow: inset 0 1px 0 #444;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+            box-shadow: 0 0 4px rgba(255,255,255,0.15);
+        }
+        .status-online {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+        .status-offline {
+            background-color: #F44336;
+            box-shadow: 0 0 8px #F44336;
+        }
+
+        .reconnect-btn {
+            padding: 8px 18px;
+            background-color: #555;
+            color: #f0f0f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+        }
+        .reconnect-btn:hover {
+            background-color: #777;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.3);
+        }
+
+        /* 📦 Cards container */
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            justify-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+        }
+
+        /* 🎨 Card styles */
+        .card {
+            background: linear-gradient(160deg, #808080 0%, #000000 100%);
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+            width: 90%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(255,255,255,0.2);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #f0f0f0;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #888;
+            padding-bottom: 6px;
+        }
+
+        .card p {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #ddd;
+            margin: 0;
+            min-height: 42px;
+            font-weight: 500;
+        }
+
+        /* 🌤 Forecast scroll inside card */
+        .forecast-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 12px;
+            padding-top: 8px;
+            padding-bottom: 6px;
+        }
+        .forecast-item {
+            flex: 0 0 auto;
+            text-align: center;
+            padding: 12px 10px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.1);
+            min-width: 70px;
+            font-weight: 600;
+            color: #f5f5f5;
+            user-select: none;
+        }
+        .forecast-item .hour {
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            color: #ccc;
+        }
+        .forecast-item img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.2));
+        }
+        .forecast-item .temp {
+            font-size: 0.9rem;
+            color: #eee;
+        }
+
+        /* Sensor data table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        
+        th {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #f0f0f0;
+            font-weight: 600;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 📱 Responsive tweaks */
+        @media (max-width: 720px) {
+            .card-container {
+                grid-template-columns: 1fr;
+            }
+            .card {
+                width: 100%;
+            }
+        }
+
+        /* Live sensor data display */
+        .sensor-data-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .sensor-item {
+            background: rgba(0,0,0,0.2);
+            padding: 12px 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sensor-label {
+            font-weight: 600;
+            color: #ddd;
+        }
+        
+        .sensor-value {
+            font-weight: 700;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+        
+        .update-status {
+            grid-column: span 2;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .chart-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .chart-btn {
+            padding: 8px 16px;
+            background: #444;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .chart-btn:hover {
+            background: #555;
+        }
+        
+        .chart-select {
+            padding: 8px 16px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Sensor history card */
+        .sensor-history-card {
+            width: 100%;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 5px;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #555 #222;
+        }
+
+        .sensor-history-card::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sensor-history-card::-webkit-scrollbar-track {
+            background: #222;
+            border-radius: 4px;
+        }
+
+        .sensor-history-card::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 4px;
+        }
+
+        .history-item {
+            background: rgba(0,0,0,0.2);
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #4CAF50;
+        }
+
+        .history-timestamp {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .history-data {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .history-value {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .history-label {
+            color: #ccc;
+        }
+
+        .history-number {
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        @media (max-width: 600px) {
+            .sensor-data-display {
+                grid-template-columns: 1fr;
+            }
+            
+            .update-status {
+                grid-column: span 1;
+            }
+        }
+
+        /* Add animation for value changes */
+        .value-changed {
+            animation: highlight 1.5s ease-out;
+        }
+
+        @keyframes highlight {
+            0% { background-color: rgba(76, 175, 80, 0.5); }
+            100% { background-color: transparent; }
+        }
+
+        /* Relay control styles */
+        .relay-controls {
+            background: linear-gradient(160deg, #404040 0%, #000000 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+            width: 100%;
+            max-width: 640px;
+        }
+
+        .relay-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #f0f0f0;
+            border-bottom: 2px solid #555;
+            padding-bottom: 6px;
+        }
+
+        .relay-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .relay-timer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .active-mode {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.7) !important;
+        }
+
+        .timer-active {
+            background-color: #2196F3 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.7) !important;
+        }
+
+        .relay-status {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #ccc;
+            padding: 5px;
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 5px;
+        }
+        
+        /* New styles for soil moisture DRY/WET indicator */
+        .sensor-value .dry {
+            color: #ff6b6b !important; 
+        }
+        
+        .sensor-value .wet {
+            color: #4ecdc4 !important; 
+        }
+        
+        /* Styling for OFF button */
+        #btnOff {
+            background-color: #555;
+        }
+
+        #btnOff:hover {
+            background-color: #777;
+        }
+        
+        #btnOff.active-mode {
+            background-color: #F44336 !important;
+            color: white !important;
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.7) !important;
+        }
+
+        /* When timer is counting down, add a blinking effect */
+        @keyframes timer-countdown {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .timer-countdown {
+            animation: timer-countdown 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Plant Disease Detection</h1>
+        </header>
+        
+        <!-- Irrigation Control HTML Section -->
+<div class="relay-controls">
+    <div class="relay-header">🚰 Irrigation Control</div>
+    
+    <div class="relay-buttons">
+        <button id="btnAutomatic" class="reconnect-btn">Automatic</button>
+        <button id="btnManual" class="reconnect-btn">Manual</button>
+        <button id="btnOff" class="reconnect-btn">OFF</button>
+    </div>
+    
+    <div class="relay-timer">
+        <span>Timer (seconds):</span>
+        <button id="timerMinus" class="reconnect-btn">-</button>
+        <span id="timerValue" style="min-width: 30px; text-align: center; font-weight: bold;">0</span>
+        <button id="timerPlus" class="reconnect-btn">+</button>
+        <button id="btnTimer" class="reconnect-btn">Set Timer</button>
+    </div>
+    
+    <div class="relay-status" id="relayStatus">
+        Loading relay status...
+    </div>
+</div>
+        
+       <h2>🌱 Live Sensor Data</h2>
+<div id="live-sensor-data" class="sensor-data-display">
+    <div class="sensor-item">
+        <span class="sensor-label">Temperature:</span>
+        <span id="live-temp" class="sensor-value">{{ current.Temperature }}°C</span>
+    </div>
+    <div class="sensor-item">
+        <span class="sensor-label">Humidity:</span>
+        <span id="live-humidity" class="sensor-value">{{ current.Humidity }}%</span>
+    </div>
+    <div class="sensor-item">
+        <span class="sensor-label">Soil Moisture:</span>
+        <span id="live-soil" class="sensor-value">
+            {% if current.Soil == "1" or current.Soil == 1 %}
+                <span class="dry">DRY</span>
+            {% elif current.Soil == "0" or current.Soil == 0 %}
+                <span class="wet">WET</span>
+            {% else %}
+                {{ current.Soil }}%
+            {% endif %}
+        </span>
+    </div>
+    <div class="sensor-item">
+        <span class="sensor-label">Water Level:</span>
+        <span id="live-water" class="sensor-value">
+            {% if current.Water %}
+                {{ (current.Water|int / 10)|int }}%
+            {% else %}
+                0%
+            {% endif %}
+        </span>
+    </div>
+    <div class="update-status">
+        <span id="last-update-time">Last updated: Just now</span>
+    </div>
+</div>
+
+
+       <div class="card" style="max-height: 400px; overflow-y: auto; padding: 10px;">
+    <h2 style="margin-bottom: 10px;">📊 Sensor History</h2>
+    
+    <div class="chart-controls" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <button id="refresh-chart" class="chart-btn">Refresh Data</button>
+        <select id="chart-type" class="chart-select">
+            <option value="bar">Bar Chart</option>
+            <option value="line">Line Chart</option>
+        </select>
+    </div>
+
+    <div style="height: 300px; overflow-x: auto;">
+  <canvas
+    id="sensorChart"
+    style="box-sizing: border-box; display: block; height: 300px; width: 1000px;" 
+    width="1000" 
+    height="375">
+  </canvas>
+</div>
+
+</div>
+
+        
+        <div class="card">
+            <h2>📝 Sensor History Data</h2>
+            <div id="sensor-history" class="sensor-history-card">
+                <!-- History items will be added here dynamically -->
+                <div class="history-loading">Loading history data...</div>
+            </div>
+        </div>
+        
+        <main>
+            <div class="video-feed-container">
+                <div class="video-feed">
+                    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Video Feed">
+                </div>
+                <div id="videoOverlay" class="video-overlay">
+                    <p>Camera disconnected. Click reconnect to try again.</p>
+                </div>
+                <div class="camera-controls">
+                    <div>
+                        <span class="status-indicator status-offline" id="cameraStatus"></span>
+                        <span id="cameraStatusText">Checking camera...</span>
+                    </div>
+                    <button class="reconnect-btn" id="reconnectBtn">Reconnect Camera</button>
+                </div>
+            </div>
+
+            
+
+
+            <div class="card-container">
+                <div class="card">
+                    <h2>Detected Disease</h2>
+                    <p id="disease">No disease detected</p>
+                </div>
+                <div class="card">
+                    <h2>Pesticide Recommendation</h2>
+                    <p id="pesticide">-</p>
+                </div>
+                <div class="card">
+                    <h2>Precautionary Advice</h2>
+                    <p id="precaution">-</p>
+                </div>
+                <div class="card">
+                    <h2>Crop Suggestion</h2>
+                    <p id="cropSuggestion">-</p>
+                </div>
+                <div class="card">
+                    <h2>Geographical Location</h2>
+                    <p id="location">Fetching location...</p>
+                </div>
+                <div class="card">
+                    <h2>Climate Data</h2>
+                    <p id="climate">Fetching climate data...</p>
+                </div>
+                <div class="card forecast-card">
+                    <h2>Today Forecast</h2>
+                    <div class="forecast-scroll" id="forecastScroll">
+                        <p>Loading forecast...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Chart.js CDN - Fixed script tag -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Elements
+        const diseaseElement = document.getElementById('disease');
+        const pesticideElement = document.getElementById('pesticide');
+        const precautionElement = document.getElementById('precaution');
+        const cropSuggestionElement = document.getElementById('cropSuggestion');
+        const locationElement = document.getElementById('location');
+        const climateElement = document.getElementById('climate');
+        const videoFeedElement = document.getElementById('videoFeed');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const cameraStatusIndicator = document.getElementById('cameraStatus');
+        const cameraStatusText = document.getElementById('cameraStatusText');
+        const reconnectBtn = document.getElementById('reconnectBtn');
+        const sensorHistoryContainer = document.getElementById('sensor-history');
+
+        // Global variable to store Chart instance
+        let sensorChart = null;
+
+        // Camera status and reconnection
+        let isVideoFeedWorking = true;
+        let retryCount = 0;
+
+        // Check camera status
+        function checkCameraStatus() {
+            fetch('/camera_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.connected) {
+                        cameraStatusIndicator.className = 'status-indicator status-online';
+                        cameraStatusText.textContent = 'Camera connected';
+                        videoOverlay.classList.remove('visible');
+                    } else {
+                        cameraStatusIndicator.className = 'status-indicator status-offline';
+                        cameraStatusText.textContent = 'Camera disconnected';
+                        videoOverlay.classList.add('visible');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking camera status:', error);
+                    cameraStatusIndicator.className = 'status-indicator status-offline';
+                    cameraStatusText.textContent = 'Camera status unknown';
+                });
+        }
+
+        // Monitor video feed for errors
+        videoFeedElement.onerror = function() {
+            console.warn('Video feed error detected');
+            isVideoFeedWorking = false;
+            retryCount++;
+
+            if (retryCount > 3) {
+                videoOverlay.classList.add('visible');
+                cameraStatusIndicator.className = 'status-indicator status-offline';
+                cameraStatusText.textContent = 'Camera disconnected';
+            }
+        };
+
+        // Video feed loaded successfully
+        videoFeedElement.onload = function() {
+            console.log('Video feed loaded successfully');
+            isVideoFeedWorking = true;
+            retryCount = 0;
+            videoOverlay.classList.remove('visible');
+        };
+
+        // Reconnect camera
+        reconnectBtn.addEventListener('click', function() {
+            cameraStatusText.textContent = 'Reconnecting...';
+            fetch('/reconnect_camera')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload the video feed
+                        const currentSrc = videoFeedElement.src;
+                        videoFeedElement.src = '';
+                        setTimeout(() => {
+                            videoFeedElement.src = currentSrc;
+                        }, 1000);
+
+                        cameraStatusIndicator.className = 'status-indicator status-online';
+                        cameraStatusText.textContent = 'Camera reconnected';
+                        videoOverlay.classList.remove('visible');
+                    } else {
+                        cameraStatusIndicator.className = 'status-indicator status-offline';
+                        cameraStatusText.textContent = 'Reconnection failed';
+                        videoOverlay.classList.add('visible');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error reconnecting camera:', error);
+                    cameraStatusIndicator.className = 'status-indicator status-offline';
+                    cameraStatusText.textContent = 'Reconnection error';
+                });
+        });
+
+        // Disease detection
+        function updateDiseaseInfo(disease) {
+            if (!disease || disease === '' || disease === 'background') {
+                diseaseElement.textContent = 'No disease detected';
+                pesticideElement.textContent = '-';
+                precautionElement.textContent = '-';
+                cropSuggestionElement.textContent = '-';
+                return;
+            }
+
+            // Helper function to render lists
+            function renderList(items) {
+                if (!items || items.length === 0) return '-';
+                let html = '<ul>';
+                items.forEach(item => {
+                    html += `<li>${item}</li>`;
+                });
+                html += '</ul>';
+                return html;
+            }
+
+            fetch(`/disease_info/${disease}`)
+                .then(response => response.json())
+                .then(data => {
+                    diseaseElement.textContent = disease.charAt(0).toUpperCase() + disease.slice(1);
+                    pesticideElement.innerHTML = renderList(data.pesticide);
+                    precautionElement.innerHTML = renderList(data.precaution);
+                    cropSuggestionElement.innerHTML = renderList(data.crop_suggestion);
+                })
+                .catch(error => {
+                    console.error('Error fetching disease information:', error);
+                    pesticideElement.textContent = '-';
+                    precautionElement.textContent = '-';
+                    cropSuggestionElement.textContent = '-';
+                });
+        }
+
+        function fetchDetectedDisease() {
+            fetch('/detected_disease')
+                .then(response => response.json())
+                .then(data => {
+                    const detectedDisease = data.disease;
+                    updateDiseaseInfo(detectedDisease);
+                })
+                .catch(error => {
+                    console.error('Error fetching detected disease:', error);
+                })
+                .finally(() => {
+                    setTimeout(fetchDetectedDisease, 3000);
+                });
+        }
+
+        // Climate data
+        const API_KEY = 'e1d854c0293b3c6adeb8121ded279f44';
+
+        function fetchForecast(lat, lon) {
+            const api = API_KEY;
+            fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${api}`)
+                .then(res => res.json())
+                .then(data => {
+                    const forecastContainer = document.getElementById('forecastScroll');
+                    forecastContainer.innerHTML = '';
+                    if (data && data.list) {
+                        const today = new Date().getDate();
+                        const todayItems = data.list.filter(item => {
+                            return new Date(item.dt_txt).getDate() === today;
+                        });
+
+                        if (todayItems.length === 0) {
+                            forecastContainer.innerHTML = '<p>No forecast available for today</p>';
+                            return;
+                        }
+
+                        todayItems.forEach(item => {
+                            const time = new Date(item.dt_txt);
+                            let hour = time.getHours();
+                            let label = '';
+                            if (hour === 0) label = '12AM';
+                            else if (hour < 12) label = hour + 'AM';
+                            else if (hour === 12) label = '12PM';
+                            else label = (hour - 12) + 'PM';
+
+                            const temp = Math.round(item.main.temp);
+                            const icon = item.weather[0].icon;
+                            const weatherDesc = item.weather[0].main;
+
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'forecast-item';
+                            itemDiv.innerHTML = `
+                                <div class="hour">${label}</div>
+                                <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${weatherDesc}">
+                                <div class="temp">${temp}°C</div>
+                            `;
+                            forecastContainer.appendChild(itemDiv);
+                        });
+                    } else {
+                        forecastContainer.innerHTML = '<p>Unable to fetch forecast data</p>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Forecast API error:', err);
+                    document.getElementById('forecastScroll').innerHTML = '<p>Error loading forecast</p>';
+                });
+        }
+
+        // Get location and weather
+        function initGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    locationElement.textContent = `Lat: ${lat.toFixed(3)}, Lon: ${lon.toFixed(3)}`;
+
+                    // Use our backend endpoint instead of direct API call
+                    fetch(`/climate_data?lat=${lat}&lon=${lon}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.main && data.weather) {
+                                const temp = data.main.temp;
+                                const humidity = data.main.humidity;
+                                const weather = data.weather[0].description;
+                                climateElement.innerHTML = `
+                                    🌡️ Temp: ${temp}°C | 💧 Humidity: ${humidity}% | 🌤️ ${weather.charAt(0).toUpperCase() + weather.slice(1)}
+                                `;
+                            } else {
+                                climateElement.textContent = 'Unable to fetch weather data';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Weather API error:', err);
+                            climateElement.textContent = 'Unable to fetch weather data';
+                        });
+
+                    // Fetch forecast
+                    fetchForecast(lat, lon);
+
+                }, error => {
+                    console.error('Geolocation error:', error);
+                    locationElement.textContent = 'Location not available';
+                    climateElement.textContent = 'Climate data not available';
+                });
+            } else {
+                locationElement.textContent = 'Geolocation not supported';
+                climateElement.textContent = 'Climate data not available';
+            }
+        }
+
+        // Function to load and display sensor history data
+        function loadSensorHistory() {
+            fetch('/sensor/logs')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        sensorHistoryContainer.innerHTML = '<div class="history-empty">No history data available</div>';
+                        return;
+                    }
+
+                    sensorHistoryContainer.innerHTML = '';
+                    
+                    // Sort data by timestamp (newest first)
+                    data.sort((a, b) => {
+                        return b.timestamp.localeCompare(a.timestamp);
+                    });
+                    
+                    // Add each history item
+                    data.forEach(item => {
+                        const historyItem = document.createElement('div');
+                        historyItem.className = 'history-item';
+                        
+                        // Format soil value for display
+                        let soilDisplay = item.soilMoisture;
+                        if (item.soilMoisture === 1 || item.soilMoisture === "1") {
+                            soilDisplay = "<span style='color:#ff6b6b'>DRY</span>";
+                        } else if (item.soilMoisture === 0 || item.soilMoisture === "0") {
+                            soilDisplay = "<span style='color:#4ecdc4'>WET</span>";
+                        } else {
+                            soilDisplay = `${item.soilMoisture}%`;
+                        }
+                        
+                        // Calculate water percentage
+                        const waterPercentage = Math.floor(parseFloat(item.water) / 10);
+                        
+                        historyItem.innerHTML = `
+                            <div class="history-timestamp">ID: ${item.timestamp}</div>
+                            <div class="history-data">
+                                <div class="history-value">
+                                    <span class="history-label">Temperature:</span>
+                                    <span class="history-number">${item.temperature}°C</span>
+                                </div>
+                                <div class="history-value">
+                                    <span class="history-label">Humidity:</span>
+                                    <span class="history-number">${item.humidity}%</span>
+                                </div>
+                                <div class="history-value">
+                                    <span class="history-label">Soil Moisture:</span>
+                                    <span class="history-number">${soilDisplay}</span>
+                                </div>
+                                <div class="history-value">
+                                    <span class="history-label">Water Level:</span>
+                                    <span class="history-number">${waterPercentage}%</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        sensorHistoryContainer.appendChild(historyItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading sensor history:', error);
+                    sensorHistoryContainer.innerHTML = '<div class="history-error">Error loading history data</div>';
+                });
+        }
+
+        // Function to refresh the sensor chart with new data
+        function refreshSensorChart() {
+            return fetch('/sensor/logs')
+                .then(response => response.json())
+                .then(data => {
+                    if (sensorChart) {
+                        sensorChart.destroy(); // Destroy existing chart
+                    }
+                    
+                    const timestamps = [];
+                    const temperatures = [];
+                    const humidities = [];
+                    const soils = [];
+                    const waters = [];
+
+                    for (let i = 0; i < data.length; i++) {
+                        const entry = data[i];
+                        timestamps.push(entry.timestamp);
+                        temperatures.push(entry.temperature);
+                        humidities.push(entry.humidity);
+                        
+                        // Handle soil display for chart (numbers only)
+                        if (entry.soilMoisture === "1" || entry.soilMoisture === 1) {
+                            soils.push(1); // DRY
+                        } else if (entry.soilMoisture === "0" || entry.soilMoisture === 0) {
+                            soils.push(0); // WET
+                        } else {
+                            soils.push(entry.soilMoisture);
+                        }
+                        
+                        // Calculate water percentage for chart
+                        waters.push(Math.floor(parseFloat(entry.water) / 10));
+                    }
+
+                    const chartType = document.getElementById('chart-type').value || 'bar';
+                    const ctx = document.getElementById('sensorChart').getContext('2d');
+                    sensorChart = new Chart(ctx, {
+                        type: chartType,
+                        data: {
+                            labels: timestamps,
+                            datasets: [
+                                {
+                                    label: 'Temperature',
+                                    data: temperatures,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.4
+                                },
+                                {
+                                    label: 'Humidity',
+                                    data: humidities,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.4
+                                },
+                                {
+                                    label: 'Soil',
+                                    data: soils,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.4
+                                },
+                                {
+                                    label: 'Water',
+                                    data: waters,
+                                    backgroundColor: 'rgba(255, 206, 86, 0.7)',
+                                    borderColor: 'rgba(255, 206, 86, 1)',
+                                    borderWidth: 2,
+                                    tension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching sensor logs:', error);
+                });
+        }
+
+        // Chart type change handler
+        document.getElementById('chart-type').addEventListener('change', function() {
+            if (sensorChart) {
+                sensorChart.config.type = this.value;
+                sensorChart.update();
+            }
+        });
+        
+        // Refresh chart button handler
+        document.getElementById('refresh-chart').addEventListener('click', function() {
+            this.disabled = true;
+            this.textContent = 'Refreshing...';
+            
+            refreshSensorChart().then(() => {
+                this.disabled = false;
+                this.textContent = 'Refresh Data';
+            });
+        });
+
+        // Initialize all components
+        function initApp() {
+            checkCameraStatus();          // Check camera status initially
+            fetchDetectedDisease();       // Start polling for disease detection
+            initGeolocation();            // Get location and weather data
+            refreshSensorChart();         // Initialize the chart with current data
+            loadSensorHistory();          // Load sensor history data
+            
+            // Check camera status periodically
+            setInterval(checkCameraStatus, 10000);
+            
+            // Auto-refresh chart every 5 minutes
+            setInterval(() => {
+                refreshSensorChart();
+                console.log("Auto-refreshed chart");
+            }, 300000); // 5 minutes
+        }
+
+        // Start the application
+        window.onload = initApp;
+    </script>
+
+    <!-- Firebase Irrigation Control Integration -->
+    <script>
+        // ================ FIREBASE IRRIGATION CONTROL INTEGRATION ================
+        // This script ensures proper Firebase integration for the irrigation control system
+        
+       // ---- Elements & Global Variables ----
+// ================ FIREBASE IRRIGATION CONTROL INTEGRATION ================
+// This script ensures proper Firebase integration for the irrigation control system
+
+// ---- Elements & Global Variables ----
+const liveSoilElement = document.getElementById('live-soil');
+const liveWaterElement = document.getElementById('live-water');
+const btnAutomatic = document.getElementById('btnAutomatic');
+const btnManual = document.getElementById('btnManual');
+const btnOff = document.getElementById('btnOff');
+const btnTimer = document.getElementById('btnTimer');
+const timerPlus = document.getElementById('timerPlus');
+const timerMinus = document.getElementById('timerMinus');
+const timerValueElement = document.getElementById('timerValue');
+const relayStatusElement = document.getElementById('relayStatus');
+
+// Tracking states for buttons
+let manualButtonState = false;
+let timerVal = 0;
+let timerActive = false;
+let timerCountdown = null;
+
+// ---- Firebase Utilities ----
+
+// Update relay button states based on Firebase data
+function updateRelayButtonStates(data) {
+    console.log("Updating relay button states with data:", data);
+    
+    // First check if both Automatic and Manual are "0" (OFF state)
+    if (data.Automatic === "0" && data.Manual === "0") {
+        // OFF state
+        btnAutomatic.classList.remove('active-mode');
+        btnManual.classList.remove('active-mode');
+        btnOff.classList.add('active-mode');
+        relayStatusElement.textContent = 'Mode: OFF';
+        manualButtonState = false;
+    } else if (data.Automatic === "1") {
+        // Automatic mode
+        btnAutomatic.classList.add('active-mode');
+        btnManual.classList.remove('active-mode');
+        btnOff.classList.remove('active-mode');
+        relayStatusElement.textContent = 'Mode: Automatic';
+        manualButtonState = false;
+    } else if (data.Manual === "1") {
+        // Manual mode
+        btnManual.classList.add('active-mode');
+        btnAutomatic.classList.remove('active-mode');
+        btnOff.classList.remove('active-mode');
+        relayStatusElement.textContent = 'Mode: Manual';
+        manualButtonState = true;
+    }
+    
+    // Handle timer if present
+    if (data.Timer) {
+        timerVal = parseInt(data.Timer) || 0;
+        timerValueElement.textContent = timerVal;
+        timerActive = (timerVal > 0);
+        
+        if (timerActive) {
+            btnTimer.classList.add('timer-active');
+            timerValueElement.classList.add('timer-countdown');
+            
+            // Add timer info to status text
+            if (!relayStatusElement.textContent.includes('Timer:')) {
+                relayStatusElement.textContent += ` | Timer: ${timerVal}s`;
+            } else {
+                // Update existing timer info
+                relayStatusElement.textContent = relayStatusElement.textContent.replace(/Timer: \d+s/, `Timer: ${timerVal}s`);
+            }
+            
+            // Start timer countdown if timer is active
+            startTimerCountdown(timerVal);
+        } else {
+            btnTimer.classList.remove('timer-active');
+            timerValueElement.classList.remove('timer-countdown');
+            
+            // Remove timer info from status text
+            if (relayStatusElement.textContent.includes(' | Timer:')) {
+                relayStatusElement.textContent = relayStatusElement.textContent.replace(/ \| Timer: \d+s/, '');
+            }
+            
+            // Stop any existing countdown
+            if (timerCountdown) {
+                clearInterval(timerCountdown);
+                timerCountdown = null;
+            }
+        }
+    }
+}
+
+// Start timer countdown function
+function startTimerCountdown(seconds) {
+    // Clear any existing countdown
+    if (timerCountdown) {
+        clearInterval(timerCountdown);
+    }
+    
+    // Set the initial countdown value
+    let remainingSeconds = seconds;
+    
+    // Update the timer display
+    timerValueElement.textContent = remainingSeconds;
+    
+    // Start the countdown interval
+    timerCountdown = setInterval(() => {
+        remainingSeconds--;
+        
+        // Update the display
+        timerValueElement.textContent = remainingSeconds;
+        
+        // Update status text
+        if (relayStatusElement.textContent.includes('Timer:')) {
+            relayStatusElement.textContent = relayStatusElement.textContent.replace(/Timer: \d+s/, `Timer: ${remainingSeconds}s`);
+        }
+        
+        // When timer reaches zero
+        if (remainingSeconds <= 0) {
+            // Clear the interval
+            clearInterval(timerCountdown);
+            timerCountdown = null;
+            
+            // Reset timer in Firebase
+            updateRelayFirebase("Timer", "0");
+            
+            // Update UI
+            btnTimer.classList.remove('timer-active');
+            timerValueElement.classList.remove('timer-countdown');
+            timerValueElement.textContent = "0";
+            timerVal = 0;
+            timerActive = false;
+            
+            // Update status text (remove timer part)
+            if (relayStatusElement.textContent.includes(' | Timer:')) {
+                relayStatusElement.textContent = relayStatusElement.textContent.replace(/ \| Timer: \d+s/, '');
+            }
+        }
+    }, 1000);
+}
+
+// Enhanced sensor data display with special handling for soil and water values
+function updateLiveSensorDisplays(data) {
+    // Helper function to update with animation
+    function updateWithAnimation(elementId, value, unit = '') {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const oldValue = element.textContent.replace(/[^0-9.]/g, '');
+        
+        if (parseFloat(oldValue) !== parseFloat(value)) {
+            element.textContent = value + unit;
+            element.parentElement.classList.remove('value-changed');
+            // Trigger reflow to restart animation
+            void element.parentElement.offsetWidth;
+            element.parentElement.classList.add('value-changed');
+        }
+    }
+
+    // Update temperature and humidity normally
+    if (data.Temperature !== undefined) {
+        updateWithAnimation('live-temp', data.Temperature, '°C');
+    }
+    
+    if (data.Humidity !== undefined) {
+        updateWithAnimation('live-humidity', data.Humidity, '%');
+    }
+    
+    // Special handling for Soil moisture - display "DRY" or "WET" based on value
+    if (data.Soil !== undefined) {
+        if (data.Soil === "1" || data.Soil === 1) {
+            liveSoilElement.innerHTML = "<span class='dry'>DRY</span>";
+            
+            // Automatically activate Automatic button if soil is dry
+            if (!btnAutomatic.classList.contains('active-mode')) {
+                console.log("Soil is DRY, activating automatic mode");
+                updateRelayFirebase("Automatic", "1");
+                updateRelayFirebase("Manual", "0");
+            }
+        } else if (data.Soil === "0" || data.Soil === 0) {
+            liveSoilElement.innerHTML = "<span class='wet'>WET</span>";
+            
+            // Automatically deactivate Automatic button if soil is wet
+            if (btnAutomatic.classList.contains('active-mode')) {
+                console.log("Soil is WET, deactivating automatic mode");
+                updateRelayFirebase("Automatic", "0");
+                updateRelayFirebase("Manual", "1");
+            }
+        } else {
+            // For any other value, show as percentage
+            updateWithAnimation('live-soil', data.Soil, '%');
+        }
+    }
+    
+    // Special handling for Water level - convert to percentage using formula
+    if (data.Water !== undefined) {
+        const waterValue = parseFloat(data.Water);
+        if (!isNaN(waterValue)) {
+            const waterPercentage = Math.floor(waterValue / 10);
+            updateWithAnimation('live-water', waterPercentage, '%');
+        }
+    }
+    
+    // Update the timestamp
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    document.getElementById('last-update-time').textContent = 'Last updated: ' + timeString;
+}
+
+// Function to update relay state in Firebase
+function updateRelayFirebase(key, value) {
+    let endpoint = key.toLowerCase();
+    
+    // Special handling for Timer which needs data in request body
+    if (endpoint === 'timer') {
+        fetch(`/relay/timer`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ timer: value })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(`Timer set to ${value}:`, data);
+            timerVal = parseInt(value);
+            timerActive = (timerVal > 0);
+            
+            if (timerActive) {
+                btnTimer.classList.add('timer-active');
+                timerValueElement.classList.add('timer-countdown');
+                // Start timer countdown
+                startTimerCountdown(timerVal);
+            } else {
+                btnTimer.classList.remove('timer-active');
+                timerValueElement.classList.remove('timer-countdown');
+                // Stop any existing countdown
+                if (timerCountdown) {
+                    clearInterval(timerCountdown);
+                    timerCountdown = null;
+                }
+            }
+        })
+        .catch(error => console.error(`Error setting timer:`, error));
+    } else if (endpoint === 'off') {
+        // For OFF button (sets both Manual and Automatic to 0)
+        fetch(`/relay/off`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Set OFF mode:", data);
+            
+            // Update UI immediately (will be overridden by Firebase updates)
+            btnAutomatic.classList.remove('active-mode');
+            btnManual.classList.remove('active-mode');
+            btnOff.classList.add('active-mode');
+            relayStatusElement.textContent = 'Mode: OFF';
+        })
+        .catch(error => console.error(`Error setting OFF mode:`, error));
+    } else {
+        // For Automatic and Manual
+        fetch(`/relay/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => console.log(`Updated ${key} to ${value}:`, data))
+        .catch(error => console.error(`Error updating ${key}:`, error));
+    }
+}
+
+// ---- Override Event Listeners ----
+
+// Remove any existing event listeners and add our new ones
+function setupRelayEventListeners() {
+    // Automatic button click handler
+    btnAutomatic.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        btnAutomatic.disabled = true;
+        btnAutomatic.textContent = 'Setting...';
+        
+        // Update Firebase
+        updateRelayFirebase("Automatic", "1");
+        updateRelayFirebase("Manual", "0");
+        
+        // Visual feedback (actual state will be updated when Firebase sends back update)
+        setTimeout(() => {
+            btnAutomatic.disabled = false;
+            btnAutomatic.textContent = 'Automatic';
+        }, 500);
+    };
+
+    // Manual button click handler 
+    btnManual.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        btnManual.disabled = true;
+        btnManual.textContent = 'Setting...';
+        
+        // Turn ON Manual mode
+        updateRelayFirebase("Manual", "1");
+        updateRelayFirebase("Automatic", "0");
+        
+        // Visual feedback (actual state will be updated when Firebase sends back update)
+        setTimeout(() => {
+            btnManual.disabled = false;
+            btnManual.textContent = 'Manual';
+        }, 500);
+    };
+    
+    // OFF button click handler
+    btnOff.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        btnOff.disabled = true;
+        btnOff.textContent = 'Setting...';
+        
+        // Use the dedicated OFF endpoint
+        updateRelayFirebase("off", "");
+        
+        // Visual feedback (actual state will be updated when Firebase sends back update)
+        setTimeout(() => {
+            btnOff.disabled = false;
+            btnOff.textContent = 'OFF';
+        }, 500);
+    };
+    
+    // Timer control: increase
+    timerPlus.onclick = function(e) {
+        e.preventDefault();
+        timerVal++;
+        timerValueElement.textContent = timerVal;
+    };
+    
+    // Timer control: decrease
+    timerMinus.onclick = function(e) {
+        e.preventDefault();
+        if (timerVal > 0) {
+            timerVal--;
+            timerValueElement.textContent = timerVal;
+        }
+    };
+    
+    // Timer set button
+    btnTimer.onclick = function(e) {
+        e.preventDefault();
+        
+        btnTimer.disabled = true;
+        btnTimer.textContent = 'Setting...';
+        
+        // Update Firebase with timer value
+        updateRelayFirebase("Timer", timerVal);
+        
+        // Visual feedback (actual state will be updated when Firebase sends back update)
+        setTimeout(() => {
+            btnTimer.disabled = false;
+            btnTimer.textContent = 'Set Timer';
+        }, 500);
+    };
+    
+    console.log("Relay event listeners configured");
+}
+
+// ---- Firebase Real-time Updates ----
+
+// Enhanced SSE handling for real-time updates
+function setupEnhancedRealtimeUpdates() {
+    // Check if EventSource is supported
+    if (typeof EventSource !== 'undefined') {
+        // Connect to the Firebase updates stream
+        const firebaseUpdates = new EventSource('/firebase-updates');
+        
+        firebaseUpdates.onmessage = function(event) {
+            try {
+                const message = JSON.parse(event.data);
+                console.log("Firebase update received:", message);
+                
+                if (message.type === 'sensor_update' || message.type === 'initial') {
+                    // Process sensor data updates
+                    updateLiveSensorDisplays(message.data);
+                    
+                    // When we get a new sensor update, refresh the history
+                    if (typeof loadSensorHistory === 'function') loadSensorHistory();
+                    if (typeof refreshSensorChart === 'function') refreshSensorChart();
+                } else if (message.type === 'disease') {
+                    // Handle disease updates
+                    if (typeof updateDiseaseInfo === 'function') updateDiseaseInfo(message.data.disease);
+                } else if (message.type === 'relay_update') {
+                    // Handle relay state updates
+                    updateRelayButtonStates(message.data);
+                }
+            } catch (error) {
+                console.error("Error processing Firebase update:", error);
+            }
+        };
+        
+        firebaseUpdates.onerror = function(event) {
+            console.error("Firebase updates connection failed, reconnecting...", event);
+            firebaseUpdates.close();
+            setTimeout(setupEnhancedRealtimeUpdates, 5000);
+        };
+    } else {
+        console.warn("Your browser doesn't support server-sent events. Falling back to polling.");
+        // Fallback to polling (every 3 seconds)
+        setInterval(function() {
+            fetch('/relay/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateRelayButtonStates(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching relay status:', error);
+                });
+                
+            fetch('/sensor/current')
+                .then(response => response.json())
+                .then(data => {
+                    updateLiveSensorDisplays(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching sensor data:', error);
+                });
+        }, 3000);
+    }
+}
+
+// ---- Initialize Firebase Integration ----
+
+// Function to initialize our Firebase integration
+function initFirebaseIntegration() {
+    console.log("Initializing enhanced Firebase irrigation control integration...");
+    
+    // Override event listeners with our Firebase-connected ones
+    setupRelayEventListeners();
+    
+    // Set up real-time updates
+    setupEnhancedRealtimeUpdates();
+    
+    // Initial fetch of relay state
+    fetch('/relay/status')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Initial relay status:", data);
+            updateRelayButtonStates(data);
+        })
+        .catch(error => {
+            console.error('Error fetching initial relay status:', error);
+        });
+        
+    // Initial fetch of sensor data
+    fetch('/sensor/current')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Initial sensor data:", data);
+            updateLiveSensorDisplays(data);
+        })
+        .catch(error => {
+            console.error('Error fetching initial sensor data:', error);
+        });
+        
+    console.log("Firebase irrigation control integration initialized successfully");
+}
+
+// Initialize when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initFirebaseIntegration); 
+        // Initialize when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initFirebaseIntegration);
+    </script>
+</body>
+</html>
