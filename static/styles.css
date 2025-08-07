@@ -1,0 +1,222 @@
+<style>
+    /* 🌈 Background and global styles */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #a8e063 0%, #fdd819 100%);
+        color: #333;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 1280px;
+        margin: 20px auto;
+        padding: 0 15px 40px;
+    }
+
+    header h1 {
+        text-align: center;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: #2c3e50;
+        letter-spacing: 1px;
+        text-shadow: 1px 1px 3px rgba(255,255,255,0.6);
+    }
+
+    main {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    /* 🎥 Video feed container */
+    .video-feed-container {
+        position: relative;
+        width: 100%;
+        max-width: 640px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        background: white;
+        overflow: hidden;
+    }
+
+    .video-feed {
+        width: 100%;
+        border-bottom: 1px solid #eee;
+        overflow: hidden;
+    }
+    .video-feed img {
+        width: 100%;
+        display: block;
+        border-radius: 10px 10px 0 0;
+        background: #000;
+    }
+
+    .video-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.75);
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 600;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        border-radius: 10px 10px 0 0;
+        text-align: center;
+        padding: 20px;
+    }
+    .video-overlay.visible {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .camera-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background: #fafafa;
+        border-radius: 0 0 10px 10px;
+        box-shadow: inset 0 1px 0 #ddd;
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+        box-shadow: 0 0 4px rgba(0,0,0,0.15);
+    }
+    .status-online {
+        background-color: #4CAF50;
+        box-shadow: 0 0 8px #4CAF50;
+    }
+    .status-offline {
+        background-color: #F44336;
+        box-shadow: 0 0 8px #F44336;
+    }
+
+    .reconnect-btn {
+        padding: 8px 18px;
+        background-color: #2196F3;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.25s ease;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
+    }
+    .reconnect-btn:hover {
+        background-color: #0b7dda;
+        box-shadow: 0 4px 12px rgba(11, 125, 218, 0.7);
+    }
+
+    /* 📦 Cards container - grid layout for 2 per row */
+    .card-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        justify-items: center;
+        width: 100%;
+        max-width: 1200px;
+        margin-top: 20px;
+    }
+
+    /* 🎨 Card styles with gradient */
+    .card {
+        background: linear-gradient(160deg, #b4ec51 0%, #f0ff6a 100%);
+        padding: 20px 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        width: 90%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .card h2 {
+        margin-top: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #34495e;
+        margin-bottom: 12px;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 6px;
+    }
+
+    .card p {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #333;
+        margin: 0;
+        min-height: 42px;
+        font-weight: 500;
+    }
+
+    /* 🌤 Forecast scroll inside card */
+    .forecast-scroll {
+        display: flex;
+        overflow-x: auto;
+        gap: 12px;
+        padding-top: 8px;
+        padding-bottom: 6px;
+    }
+    .forecast-item {
+        flex: 0 0 auto;
+        text-align: center;
+        padding: 12px 10px;
+        background-color: rgba(255,255,255,0.4);
+        border-radius: 12px;
+        box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+        min-width: 70px;
+        font-weight: 600;
+        color: #2c3e50;
+        user-select: none;
+    }
+    .forecast-item .hour {
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #2980b9;
+    }
+    .forecast-item img {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 0 1px rgba(0,0,0,0.15));
+    }
+    .forecast-item .temp {
+        font-size: 0.9rem;
+    }
+
+    /* 📱 Responsive tweaks for small screens */
+    @media (max-width: 720px) {
+        .card-container {
+            grid-template-columns: 1fr;
+        }
+        .card {
+            width: 100%;
+        }
+    }
+</style>
+
+
+
+/12_Plant_Health_Irrigation_System/Relay/Automatic
+/12_Plant_Health_Irrigation_System/Relay/Manual
+/12_Plant_Health_Irrigation_System/Relay/Timer
+/12_Plant_Health_Irrigation_System/Sensor
+/12_Plant_Health_Irrigation_System/Sensor/CurrentData/Humidity
+/12_Plant_Health_Irrigation_System/Sensor/SensorData
