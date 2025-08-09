@@ -7,3 +7,4 @@ Pillow==9.5.0
 firebase-admin==6.5.0
 requests==2.31.0
 h5py==3.9.0
+--upgrade pip setuptools wheel
